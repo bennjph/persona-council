@@ -1,21 +1,22 @@
 # Persona Council
 
-Multi-persona AI review system. Dispatches plans/specs to 6-7 specialized reviewer personas, each powered by a different AI model, producing a structured synthesis brief.
+Multi-persona AI review system. Dispatches plans/specs/code to 7 specialized reviewer personas, each powered by a different AI model, producing a structured synthesis brief.
 
-Three dispatch stacks: CLI ($0/run), Premium API ($0.10/run), Budget API ($0.04/run).
+Three scenarios: plan review (`dev-plan`), spec review (`prd`), execution review (`execution`).
 
 ## Quick Start
 
 ```bash
-# Budget API (recommended) — 7 personas, ~$0.04/run, ~55s
 export OPENROUTER_API_KEY="your-key"
+
+# Review a plan before implementation
 python3 council_api_budget.py --plan path/to/plan.md --scenario dev-plan --repo /path/to/project
 
-# Premium API — 6 personas, ~$0.10/run, ~110s
-python3 council_api.py --plan path/to/plan.md --scenario prd --repo /path/to/project
+# Review a PRD/spec
+python3 council_api_budget.py --plan path/to/spec.md --scenario prd --repo /path/to/project
 
-# CLI (subscription-based) — 6 personas, $0/run, ~240s
-python3 council_cli.py --plan path/to/plan.md --scenario dev-plan --repo /path/to/project
+# Review code after implementation (against the original plan)
+python3 council_api_budget.py --plan path/to/plan.md --scenario execution --repo /path/to/project
 ```
 
 ## Stacks
@@ -81,6 +82,18 @@ python3 council_cli.py --plan path/to/plan.md --scenario dev-plan --repo /path/t
 
 *7th persona in budget stack only
 
+### `execution` — Post-Implementation Execution Review (7 personas)
+
+| Persona | Focus |
+|---------|-------|
+| Logic & Correctness Auditor | Branch tracing, null handling, edge cases, data integrity |
+| Security & Trust Boundary Reviewer | OWASP Top 10, injection, auth, secrets, trust boundaries |
+| Performance & Resource Efficiency Analyst | N+1 queries, memory leaks, complexity, resource management |
+| Plan Fidelity Checker | Drift from spec, missing requirements, scope creep, unplanned additions |
+| Test & Coverage Verifier | Coverage gaps, flaky tests, assertion quality, preservation properties |
+| Code Health & Maintainability Inspector | Naming, dead code, complexity, entropy, anti-additive bias |
+| Integration & Contract Compliance Reviewer | API contracts, coupling, type safety, backwards compatibility |
+
 ## Output
 
 Each run produces 2-3 files in `output/`:
@@ -134,7 +147,9 @@ persona-council/
     personas/
       prd/                          # 7 PRD scenario personas
       dev-plan/                     # 7 dev-plan scenario personas
+      execution/                    # 7 execution review personas
   output/                           # Generated reviews + synthesis + metrics
   docs/
     experiment-results.md           # Full experiment documentation
+    setup.md                        # Setup guide for other projects
 ```

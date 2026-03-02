@@ -86,6 +86,15 @@ SCENARIOS = {
         {"persona": "test-qa-strategy-auditor",    "model": "qwen-3.5-27b",        "label": "Test & QA Strategy Auditor"},
         {"persona": "dependency-risk-mapper",      "model": "mistral-large",        "label": "Dependency & Integration Risk Mapper"},
     ],
+    "execution": [
+        {"persona": "logic-correctness-auditor",       "model": "deepseek-v3.2",   "label": "Logic & Correctness Auditor"},
+        {"persona": "security-trust-reviewer",          "model": "gemini-3-flash",  "label": "Security & Trust Boundary Reviewer"},
+        {"persona": "performance-resource-analyst",     "model": "mistral-large",   "label": "Performance & Resource Efficiency Analyst"},
+        {"persona": "plan-fidelity-checker",            "model": "deepseek-v3.2",   "label": "Plan Fidelity Checker"},
+        {"persona": "test-coverage-verifier",           "model": "gemini-3-flash",  "label": "Test & Coverage Verifier"},
+        {"persona": "code-health-inspector",            "model": "qwen-3.5-27b",   "label": "Code Health & Maintainability Inspector"},
+        {"persona": "integration-contract-reviewer",    "model": "qwen-3.5-27b",   "label": "Integration & Contract Compliance Reviewer"},
+    ],
 }
 
 # --- Helpers (same as council_api.py) ---

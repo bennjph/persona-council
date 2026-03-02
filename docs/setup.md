@@ -69,16 +69,23 @@ Dispatch a plan or spec to the Persona Council for multi-persona review. 7 revie
 ## Usage
 
 ```
+# Review a plan before implementation
 /council-plan-review path/to/my-plan.md dev-plan
 /council-plan-review specs/feature-brief.md prd
+
+# Review code after implementation (against the original plan)
+/council-execution-review path/to/original-plan.md
 ```
+
+For execution review, also create `.claude/commands/council-execution-review.md` — same template but with `--scenario execution` and the 5-step protocol focuses on code changes rather than plan changes.
 
 ## Scenarios
 
-| Scenario | Use When |
-|----------|----------|
-| `dev-plan` | Engineering/implementation plans, technical designs |
-| `prd` | PRDs, specs, requirements documents, feature briefs |
+| Scenario | Use When | Command |
+|----------|----------|---------|
+| `dev-plan` | Engineering/implementation plans, technical designs | `/council-plan-review` |
+| `prd` | PRDs, specs, requirements documents, feature briefs | `/council-plan-review` |
+| `execution` | Post-implementation code review against the original plan | `/council-execution-review` |
 
 ## What You Get
 
