@@ -104,4 +104,4 @@ Contributions welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
 MIT License. See [LICENSE](LICENSE).
 
-Built by [Ben Joseph](https://benal.co).
+Built by [Benison Joseph](https://benirl.co).

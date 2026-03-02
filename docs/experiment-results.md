@@ -1,7 +1,7 @@
 # Persona Council: Experiment Results
 
 **Date:** 2026-03-02
-**Author:** Benison Sam (with Claude Code)
+**Author:** Benison Joseph (with Claude Code)
 **Repository:** [github.com/bennjph/persona-council](https://github.com/bennjph/persona-council)
 
 ---
