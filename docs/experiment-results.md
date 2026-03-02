@@ -1,27 +1,35 @@
-# Persona Council: Experiment Results & Findings
+# Persona Council: Experiment Results
 
 **Date:** 2026-03-02
 **Author:** Benison Sam (with Claude Code)
-**Repository:** `/Users/benison/Projects/persona-council/`
+**Repository:** [github.com/bennjph/persona-council](https://github.com/bennjph/persona-council)
+
+---
+
+## How to Read This
+
+This document walks through 5 experiments that shaped the production Persona Council. Each experiment tests a different model stack and records pass rates, latency, cost, and review quality. If you're here to evaluate whether this tool fits your workflow, start with the [Executive Summary](#executive-summary) and the [Recommended Production Stack](#recommended-production-stack-validated). If you want the full story of how we got there -- including the models that failed -- read straight through.
+
+All data tables are preserved as-is from the experiment runs. Nothing's been rounded or cherry-picked.
 
 ---
 
 ## Executive Summary
 
-We built and tested three review council stacks — CLI-based ($0/run), Premium API ($0.10/run), and Budget API ($0.04/run) — dispatching 6-7 specialized reviewer personas against the same engineering plan across 4 experiments. The experiments validate that **cheap, diverse models with rich persona prompts produce comparable reviews faster and cheaper than premium stacks**.
+I built and tested three review council stacks -- CLI-based ($0/run), Premium API ($0.10/run), and Budget API ($0.04/run) -- dispatching 6-7 specialized reviewer personas against the same engineering plan across 5 experiments. The core finding: **cheap, diverse models with rich persona prompts produce comparable reviews faster and cheaper than premium stacks**.
 
-**Key finding:** A 7-persona budget stack using 4 models (DeepSeek V3.2, Qwen 3.5-27B, Gemini Flash 3.0, Mistral Large) achieves 100% contract compliance at $0.04/run. The optimized stack was validated in Experiment 4 with 7/7 pass rate and zero retries across both scenarios.
+The numbers: a 7-persona budget stack using 4 models (DeepSeek V3.2, Qwen 3.5-27B, Gemini Flash 3.0, Mistral Large) hits 100% contract compliance at $0.04/run. Validated in Experiment 4 with 7/7 pass rate and zero retries across both scenarios.
 
 ---
 
 ## What We Built
 
-### The System
+### The Pipeline
 
-A CLI tool that dispatches a plan/spec document to multiple AI models simultaneously, each running as a different "persona" (reviewer archetype) with a rich system prompt defining their review method, focus area, and output format.
+A CLI tool that dispatches a plan or spec to multiple AI models simultaneously. Each model runs as a different "persona" (reviewer archetype) with a rich system prompt defining its review method, focus area, and output format.
 
 ```
-Plan/Spec → council_*.py → 6-7 concurrent reviewers → Validation Gate → Synthesis Brief
+Plan/Spec --> council_*.py --> 6-7 concurrent reviewers --> Validation Gate --> Synthesis Brief
 ```
 
 ### Three Stacks Tested
@@ -35,14 +43,14 @@ Plan/Spec → council_*.py → 6-7 concurrent reviewers → Validation Gate → 
 
 ### Two Review Scenarios
 
-1. **PRD/Spec Review** — 6-7 personas pressure-test requirements documents for gaps, ambiguities, testability, edge cases, acceptance criteria, and dependency risks
-2. **Dev Plan Review** — 6-7 personas review engineering plans for architecture, deployment risk, observability, coupling, estimates, QA strategy, and dependency risks
+1. **PRD/Spec Review** -- 6-7 personas pressure-test requirements documents for gaps, ambiguities, testability, edge cases, acceptance criteria, and dependency risks
+2. **Dev Plan Review** -- 6-7 personas review engineering plans for architecture, deployment risk, observability, coupling, estimates, QA strategy, and dependency risks
 
 ---
 
-## Experiment 1: CLI Council (Baseline)
+## Experiment 1: The CLI Baseline Proves the Concept
 
-**Stack:** Codex CLI (GPT 5.3 Codex) × 3 personas + OpenCode CLI (Kimi K2.5 via OpenRouter) × 3 personas
+**Stack:** Codex CLI (GPT 5.3 Codex) x 3 personas + OpenCode CLI (Kimi K2.5 via OpenRouter) x 3 personas
 
 **Cost:** $0/run (uses existing $20 ChatGPT + $40 Kimi subscriptions)
 
@@ -64,17 +72,17 @@ Plan/Spec → council_*.py → 6-7 concurrent reviewers → Validation Gate → 
 | Estimate Calibrator | OpenCode/Kimi | 148.9s |
 | Test & QA Strategy Auditor | OpenCode/Kimi | 115.8s |
 
-### Key Observations
+### What I Learned
 
-- **Filesystem access is the killer feature.** Codex `-C` and OpenCode `--dir` let models read actual source code. Coupling Detector cited specific file:line references and import chains.
+- **Filesystem access is the killer feature.** Codex `-C` and OpenCode `--dir` let models read actual source code. Coupling Detector cited specific file:line references and import chains. No amount of context injection fully replaces this.
 - **OpenCode/Kimi personas were initially timing out (300s).** Fixed by scoping prompts to "read only 3-5 files most central to the plan" and pre-computing a repo brief. All 6 passed after this fix.
 - **100% contract compliance.** All reviews contained the required sections (Findings, Top 3 Recommendations, What I Might Be Wrong About).
 
-### Latency Issue & Fix
+### Timeouts Taught Me to Scope Context
 
 Two OpenCode/Kimi personas (Estimate Calibrator, Test & QA Strategy Auditor) timed out at 300s on the first run. Root cause: unbounded "READ SOURCE CODE" instructions caused Kimi K2.5 to scan too many files.
 
-**Fix applied (from CTO Mentor tiered-context discipline):**
+**The fix -- tiered-context discipline:**
 1. Scoped persona prompts: "read only the 3-5 files most central to the plan"
 2. Added `build_repo_brief()`: pre-computes file inventory (max 30 files) injected into prompt
 3. Anti-exploration constraint: "Do NOT scan directories or read more than 3-5 files total"
@@ -83,7 +91,7 @@ After fix: 6/6 passed, 242s wall time, zero timeouts.
 
 ---
 
-## Experiment 2: Premium API Council
+## Experiment 2: Premium Models Set the Quality Ceiling
 
 **Stack:** 6 diverse models via OpenRouter API, one per persona
 
@@ -127,17 +135,17 @@ After fix: 6/6 passed, 242s wall time, zero timeouts.
 | QA Test Case Reviewer | MiniMax M2.5 | 58.3s | $0.0048 | 8,626→1,948 | 33.5 tps |
 | Acceptance Criteria Engineer | GLM 5 | 60.2s | $0.0163 | 9,653→2,305 | 38.4 tps |
 
-### Cost Breakdown
+### Two Models Ate 76% of the Budget
 
-GPT 5.3 Codex + Gemini 3.1 Pro = **76% of total API cost**. DeepSeek V3.2 at $0.003/review is 25x cheaper than GPT 5.3 at near-equal quality.
+GPT 5.3 Codex + Gemini 3.1 Pro = **76% of total API cost**. DeepSeek V3.2 at $0.003/review is 25x cheaper than GPT 5.3 at near-equal quality. That's the number that motivated Experiment 3.
 
-### Context Leveling
+### How API Models Get Context
 
 CLI personas have filesystem access (can read repo files). API personas get pre-loaded file contents injected into the prompt via `build_repo_context()`. This reads the 3-5 files most relevant to the plan and packs them as fenced code blocks in the user message.
 
 ---
 
-## Experiment 3: Budget API Council
+## Experiment 3: Cheap Models -- Who Survives?
 
 **Stack:** 7 diverse cheap models via OpenRouter API, 7 personas (added Dependency & Integration Risk Mapper)
 
@@ -172,19 +180,19 @@ CLI personas have filesystem access (can read repo files). API personas get pre-
 | Llama 4 Maverick | 11.5s | 10.5s | $0.0016 | $0.0017 | 53-60 | **0%** (both scenarios) | stop |
 | Mistral Large 2512 | 34.3s | 48.6s | $0.0082 | $0.0087 | 43-51 | 100% | stop |
 
-### Failure Analysis
+### Three Models Failed -- Here's Why
 
-**Llama 4 Maverick (0% compliance):** Ultra-fast (10-12s) and ultra-cheap ($0.002) but cannot follow the structured output format. Produces narrative reviews without `[SEVERITY]` tags or required sections. Rich persona prompts don't compensate for weak instruction-following.
+**Llama 4 Maverick (0% compliance):** Ultra-fast (10-12s) and ultra-cheap ($0.002) but can't follow the structured output format. Produces narrative reviews without `[SEVERITY]` tags or required sections. Rich persona prompts don't compensate for weak instruction-following.
 
-**Kimi K2.5 (50% compliance):** Hit the 4096 max_tokens limit ("length" finish in OpenRouter). Produces verbose output that gets truncated before reaching required sections. Also extremely slow (181-211s) — the wall-time bottleneck.
+**Kimi K2.5 (50% compliance):** Hit the 4096 max_tokens limit ("length" finish in OpenRouter). Produces verbose output that gets truncated before reaching required sections. Also extremely slow (181-211s) -- the wall-time bottleneck.
 
-**GPT 5.1 Codex Mini (50% compliance):** Passed PRD but failed dev-plan. Inconsistent — may need stronger format enforcement in the persona prompt for code-review tasks.
+**GPT 5.1 Codex Mini (50% compliance):** Passed PRD but failed dev-plan. Inconsistent -- may need stronger format enforcement in the persona prompt for code-review tasks.
 
 ---
 
-## Experiment 4: Optimized Budget Stack (Production)
+## Experiment 4: The Survivors Hit 100%
 
-**Stack:** 4 models × 7 personas. Dropped Llama 4 Maverick, Kimi K2.5, and GPT 5.1 Codex Mini based on Experiment 3 failures. DeepSeek V3.2, Qwen 3.5-27B, and Gemini Flash 3.0 each serve 2 personas.
+**Stack:** 4 models x 7 personas. Dropped Llama 4 Maverick, Kimi K2.5, and GPT 5.1 Codex Mini based on Experiment 3 failures. DeepSeek V3.2, Qwen 3.5-27B, and Gemini Flash 3.0 each serve 2 personas.
 
 ### Model Assignment
 
@@ -198,9 +206,9 @@ CLI personas have filesystem access (can read repo files). API personas get pre-
 | Qwen 3.5-27B | `qwen/qwen3.5-27b` | Test & QA Strategy Auditor | Acceptance Criteria Engineer |
 | Mistral Large 2512 | `mistralai/mistral-large-2512` | Dependency Risk Mapper | Dependency Risk Mapper |
 
-### Why GPT 5.1 Codex Mini Was Dropped
+### Why GPT 5.1 Codex Mini Got Cut Too
 
-Between Experiments 3 and 4, we ran the original 5-model stack (keeping GPT 5.1 Codex Mini, dropping only Llama 4 Maverick and Kimi K2.5). GPT 5.1 Codex Mini failed **both** scenarios — hitting the 4096 token limit and producing output_tokens: 4096 without completing required sections. Overall compliance: 1/4 runs (25%). Demoted from Tier 2 to Tier 3.
+Between Experiments 3 and 4, I ran the original 5-model stack (keeping GPT 5.1 Codex Mini, dropping only Llama 4 Maverick and Kimi K2.5). GPT 5.1 Codex Mini failed **both** scenarios -- hitting the 4096 token limit and producing output_tokens: 4096 without completing required sections. Overall compliance: 1/4 runs (25%). Demoted from Tier 2 to Tier 3.
 
 ### Results
 
@@ -233,20 +241,20 @@ Between Experiments 3 and 4, we ran the original 5-model stack (keeping GPT 5.1 
 | Acceptance Criteria Engineer | Qwen 3.5-27B | 42.9s | $0.004 | 11,531/3,494 |
 | Dependency Risk Mapper | Mistral Large | 48.6s | $0.008 | 11,260/1,774 |
 
-### Key Observations
+### What the Numbers Show
 
 - **100% compliance, zero retries.** All 4 models passed validation on first attempt across both scenarios.
 - **DeepSeek V3.2 latency variance.** Same model showed 45s in Experiment 3 but 55-142s in Experiment 4. This is OpenRouter load variance, not a model issue. DeepSeek still produced correct output.
 - **Gemini Flash dominates speed.** 10-12s per review regardless of persona. Fastest model by 3-4x.
-- **Cost stable at $0.04/run.** Nearly identical to the 7-model Experiment 3 despite fewer models — GPT 5.1 Codex Mini's removal saved ~$0.01 but Gemini Flash replacement costs ~$0.009.
+- **Cost stable at $0.04/run.** Nearly identical to the 7-model Experiment 3 despite fewer models -- GPT 5.1 Codex Mini's removal saved ~$0.01 but Gemini Flash replacement costs ~$0.009.
 
 ---
 
-## Experiment 5: Execution Review (New Scenario)
+## Experiment 5: Can the Same Stack Review Code?
 
-**Stack:** Same 4-model budget stack. NEW personas designed for post-implementation code review.
+**Stack:** Same 4-model budget stack. New personas designed for post-implementation code review.
 
-This is a fundamentally different review type — instead of reviewing a plan before implementation, it reviews the CODE CHANGES against the original plan. Personas were designed from first-principles research across the CTO Mentor vault, existing review patterns, and industry best practices (Google, Microsoft, diffray, CodeRabbit).
+This is a fundamentally different review type -- instead of reviewing a plan before implementation, it reviews the code changes against the original plan. I designed these personas from first-principles research across existing review patterns and industry best practices (Google, Microsoft, diffray, CodeRabbit).
 
 ### Model Assignment
 
@@ -278,17 +286,17 @@ This is a fundamentally different review type — instead of reviewing a plan be
 | Code Health & Maintainability Inspector | Qwen 3.5-27B | 32.9s | $0.004 | 11,776/2,539 | yes |
 | Integration & Contract Compliance Reviewer | Qwen 3.5-27B | 72.9s | $0.006 | 11,780/5,556 | no |
 
-### Key Observations
+### What I Learned
 
 - **7/7 passed.** All execution review personas produced valid, severity-tagged findings on first run.
-- **Code Health Inspector needed 1 retry.** Qwen 3.5-27B's first attempt was too verbose without following format. Self-corrected on retry — same pattern seen in earlier experiments.
-- **Plan Fidelity Checker is the standout.** Unique to execution review — no equivalent in plan-stage review. Caught requirement-to-implementation gaps that other personas missed.
-- **Same cost as plan review.** $0.042 vs $0.040 for dev-plan — execution review is cost-equivalent.
+- **Code Health Inspector needed 1 retry.** Qwen 3.5-27B's first attempt was too verbose without following format. Self-corrected on retry -- same pattern seen in earlier experiments.
+- **Plan Fidelity Checker is the standout persona.** It's unique to execution review -- no equivalent in plan-stage review. It caught requirement-to-implementation gaps that other personas missed entirely.
+- **Same cost as plan review.** $0.042 vs $0.040 for dev-plan -- execution review is cost-equivalent.
 - **Wall time higher (176s vs 92s).** Driven by DeepSeek V3.2 latency variance (116s for Plan Fidelity Checker). Typical run should be ~90s when DeepSeek is at normal speed.
 
 ---
 
-## Three-Stack Comparison
+## How the Three Stacks Compare
 
 ### Latency
 
@@ -336,7 +344,7 @@ This is a fundamentally different review type — instead of reviewing a plan be
 
 ## Model Tier Rankings
 
-### Tier 1 — Reliable, Expand
+### Tier 1 -- Reliable, Expand
 
 | Model | Avg Latency | Avg Cost | Compliance | Verdict |
 |-------|------------|----------|------------|---------|
@@ -344,23 +352,23 @@ This is a fundamentally different review type — instead of reviewing a plan be
 | **Qwen 3.5-27B** | 42s | $0.011 | 100% | Fast, good reasoning. Excellent for code analysis. |
 | **Gemini Flash 3.0** | **10s** | $0.009 | 100% | Blazing fast. Excellent Gemini 3.1 Pro replacement at 3x less cost. |
 
-### Tier 2 — Reliable, Keep
+### Tier 2 -- Reliable, Keep
 
 | Model | Avg Latency | Avg Cost | Compliance | Verdict |
 |-------|------------|----------|------------|---------|
 | **Mistral Large 2512** | 41s | $0.008 | 100% | Solid format compliance. Good for structured output tasks. |
 
-### Tier 3 — Drop from API Council
+### Tier 3 -- Drop from API Council
 
 | Model | Issue | Verdict |
 |-------|-------|---------|
 | **GPT 5.1 Codex Mini** | Hits 4096 token limit, 25% compliance | Fast but can't complete structured output |
 | **Kimi K2.5** | 181-211s latency, hits 4096 token limit | Keep for CLI (subscription), drop from API |
 | **Llama 4 Maverick** | 0% contract compliance | Cannot follow structured output format |
-| **GLM 5** | Redundant — replaced by better-value models | Drop in favor of DeepSeek/Qwen |
-| **MiniMax M2.5** | Redundant — replaced by Mistral Large | Drop in favor of Mistral |
+| **GLM 5** | Redundant -- replaced by better-value models | Drop in favor of DeepSeek/Qwen |
+| **MiniMax M2.5** | Redundant -- replaced by Mistral Large | Drop in favor of Mistral |
 
-### Tier S — Premium (use when quality > cost)
+### Tier S -- Premium (use when quality > cost)
 
 | Model | Avg Latency | Avg Cost | Verdict |
 |-------|------------|----------|---------|
@@ -371,7 +379,7 @@ This is a fundamentally different review type — instead of reviewing a plan be
 
 ## Recommended Production Stack (Validated)
 
-Based on all four experiments. Validated in Experiment 4: **7/7 pass rate, zero retries, both scenarios.**
+Based on all five experiments. Validated in Experiment 4: **7/7 pass rate, zero retries, both scenarios.**
 
 | # | Persona | Model | Actual Cost | Actual Time |
 |---|---------|-------|-------------|-------------|
@@ -387,13 +395,13 @@ Based on all four experiments. Validated in Experiment 4: **7/7 pass rate, zero 
 
 *DeepSeek V3.2 latency varies 45-142s depending on OpenRouter load. Typical is 45s.
 
-### Routing Decision
+### When to Use Which Stack
 
-| Scenario | Stack | Rationale |
-|----------|-------|-----------|
+| Scenario | Stack | Why |
+|----------|-------|-----|
 | PRD / Spec review | **Budget API** | No filesystem needed. Fast. Cheap. Model diversity compensates. |
 | Dev plan review | **Budget API** | Context injection levels the field. 2x faster than CLI. |
-| Code audit (line-level) | **CLI** | Filesystem access irreplaceable for file:line citations. |
+| Code audit (line-level) | **CLI** | Filesystem access is irreplaceable for file:line citations. |
 | Cost-constrained | **CLI** | $0 marginal if subscriptions already active. |
 | Maximum quality | **Premium API** | GPT 5.3 + Gemini 3.1 Pro for highest reasoning quality. |
 
@@ -411,12 +419,12 @@ Based on all four experiments. Validated in Experiment 4: **7/7 pass rate, zero 
 
 ### Shared Infrastructure
 
-- **Persona files:** `config/personas/{prd,dev-plan}/*.md` — 7 personas per scenario, shared across all stacks
+- **Persona files:** `config/personas/{prd,dev-plan}/*.md` -- 7 personas per scenario, shared across all stacks
 - **Output format:** Validated against required sections + severity tags + minimum finding count
 - **Synthesis brief:** Auto-generated summary grouping findings by severity with primary-agent processing instructions
 - **Repo context:** `build_repo_context()` reads 3-5 relevant files and injects contents into API prompts
 
-### Validation Gate (Upgraded)
+### Validation Gate
 
 ```python
 REQUIRED_SECTIONS = ["Findings", "Top 3 Recommendations", "What I Might Be Wrong About"]
@@ -428,30 +436,30 @@ Reviews must have all 3 sections, at least 1 severity tag, and at least 2 findin
 
 ### Concurrency
 
-- CLI: `asyncio.Semaphore(4)` — CLI subprocesses are heavy
+- CLI: `asyncio.Semaphore(4)` -- CLI subprocesses are heavy
 - API: `asyncio.Semaphore(4)` + exponential backoff for 429/5xx
 
 ---
 
 ## Key Insights
 
-### 1. Rich persona prompts are the equalizer
+### Rich persona prompts are the great equalizer
 
-Prior experiment (Exp 2) showed rich personas cost $0.001 extra and dramatically improve weak models. This held: DeepSeek V3.2 at $0.003/review with a rich persona prompt produces findings comparable to GPT 5.3 Codex at $0.042/review.
+I tested this directly in Experiment 2. Rich personas cost $0.001 extra and dramatically improve weak models. DeepSeek V3.2 at $0.003/review with a rich persona prompt produces findings comparable to GPT 5.3 Codex at $0.042/review. That's a 14x price gap for near-equal output.
 
-### 2. Model diversity > model quality for review coverage
+### Four cheap models catch more than two expensive ones
 
-6 different cheap models catch more unique issues than 2 expensive models, because each model has different training biases and knowledge gaps. The "wisdom of the crowd" effect is real.
+6 different cheap models catch more unique issues than 2 expensive models, because each model has different training biases and knowledge gaps. The "wisdom of the crowd" effect is real -- and it's measurable in the finding counts above.
 
-### 3. Structured output compliance is the real filter
+### Instruction-following separates the tiers, not reasoning
 
-The gap between Tier 1 models (100% compliance) and Tier 3 models (0-50% compliance) isn't reasoning quality — it's instruction-following. Llama 4 Maverick has good reasoning but can't produce `[SEVERITY] Title` formatted findings.
+The gap between Tier 1 models (100% compliance) and Tier 3 models (0-50% compliance) isn't reasoning quality -- it's instruction-following. Llama 4 Maverick has good reasoning but can't produce `[SEVERITY] Title` formatted findings. That's the filter.
 
-### 4. Speed is mostly about output token generation
+### Wall time is token-generation speed, nothing else
 
 Gemini Flash 3.0 at 112-115 tps produces reviews in 10s. Kimi K2.5 at 17-19 tps takes 180-210s for similar-length output. The speed difference is 6-10x, driven entirely by model inference speed.
 
-### 5. CLI has an irreplaceable advantage for code review
+### CLI still wins for code review (and probably always will)
 
 API models get pre-loaded file contents, but CLI models (Codex with `-C`) can explore interactively. For the Coupling Detector persona, CLI consistently scored 5/5 specificity (file:line citations) vs API's 4/4.
 
@@ -459,50 +467,50 @@ API models get pre-loaded file contents, but CLI models (Codex with `-C`) can ex
 
 ## Raw Data Files
 
-All outputs are in `/Users/benison/Projects/persona-council/output/`:
+All experiment outputs live in `output/`:
 
 ### CLI Council
-- `dev-plan-20260302-061324.md` — First CLI run (4/6 passed, pre-fix)
-- `dev-plan-20260302-062954.md` — Second CLI run (6/6 passed, post-fix)
-- `dev-plan-20260302-062954-synthesis.md` — CLI dev-plan synthesis
-- `prd-20260302-063530.md` — CLI PRD run (6/6 passed)
-- `prd-20260302-063530-synthesis.md` — CLI PRD synthesis
+- `dev-plan-20260302-061324.md` -- first CLI run (4/6 passed, pre-fix)
+- `dev-plan-20260302-062954.md` -- second CLI run (6/6 passed, post-fix)
+- `dev-plan-20260302-062954-synthesis.md` -- CLI dev-plan synthesis
+- `prd-20260302-063530.md` -- CLI PRD run (6/6 passed)
+- `prd-20260302-063530-synthesis.md` -- CLI PRD synthesis
 
 ### Premium API Council
-- `dev-plan-api-20260302-070618.md` — Premium API dev-plan (6/6)
-- `dev-plan-api-20260302-070618-synthesis.md` — Synthesis
-- `dev-plan-api-20260302-070618-metrics.json` — Tokens, cost, latency
-- `prd-api-20260302-070609.md` — Premium API PRD (6/6)
-- `prd-api-20260302-070609-synthesis.md` — Synthesis
-- `prd-api-20260302-070609-metrics.json` — Metrics
+- `dev-plan-api-20260302-070618.md` -- premium API dev-plan (6/6)
+- `dev-plan-api-20260302-070618-synthesis.md` -- synthesis
+- `dev-plan-api-20260302-070618-metrics.json` -- tokens, cost, latency
+- `prd-api-20260302-070609.md` -- premium API PRD (6/6)
+- `prd-api-20260302-070609-synthesis.md` -- synthesis
+- `prd-api-20260302-070609-metrics.json` -- metrics
 
-### Budget API Council (Experiment 3 — 7 models)
-- `dev-plan-budget-20260302-073847.md` — Budget dev-plan (5/7)
-- `dev-plan-budget-20260302-073847-synthesis.md` — Synthesis
-- `dev-plan-budget-20260302-073847-metrics.json` — Metrics
-- `prd-budget-20260302-073501.md` — Budget PRD (6/7)
-- `prd-budget-20260302-073501-synthesis.md` — Synthesis
-- `prd-budget-20260302-073501-metrics.json` — Metrics
+### Budget API Council (Experiment 3 -- 7 models)
+- `dev-plan-budget-20260302-073847.md` -- budget dev-plan (5/7)
+- `dev-plan-budget-20260302-073847-synthesis.md` -- synthesis
+- `dev-plan-budget-20260302-073847-metrics.json` -- metrics
+- `prd-budget-20260302-073501.md` -- budget PRD (6/7)
+- `prd-budget-20260302-073501-synthesis.md` -- synthesis
+- `prd-budget-20260302-073501-metrics.json` -- metrics
 
-### Budget API Council (Experiment 4 — Optimized 4 models, production)
-- `dev-plan-budget-20260302-080011.md` — Budget dev-plan (7/7)
-- `dev-plan-budget-20260302-080011-synthesis.md` — Synthesis
-- `dev-plan-budget-20260302-080011-metrics.json` — Metrics
-- `prd-budget-20260302-080102.md` — Budget PRD (7/7)
-- `prd-budget-20260302-080102-synthesis.md` — Synthesis
-- `prd-budget-20260302-080102-metrics.json` — Metrics
+### Budget API Council (Experiment 4 -- optimized 4 models, production)
+- `dev-plan-budget-20260302-080011.md` -- budget dev-plan (7/7)
+- `dev-plan-budget-20260302-080011-synthesis.md` -- synthesis
+- `dev-plan-budget-20260302-080011-metrics.json` -- metrics
+- `prd-budget-20260302-080102.md` -- budget PRD (7/7)
+- `prd-budget-20260302-080102-synthesis.md` -- synthesis
+- `prd-budget-20260302-080102-metrics.json` -- metrics
 
 ### Execution Review (Experiment 5)
-- `execution-budget-20260302-084342.md` — Execution review (7/7)
-- `execution-budget-20260302-084342-synthesis.md` — Synthesis
-- `execution-budget-20260302-084342-metrics.json` — Metrics
+- `execution-budget-20260302-084342.md` -- execution review (7/7)
+- `execution-budget-20260302-084342-synthesis.md` -- synthesis
+- `execution-budget-20260302-084342-metrics.json` -- metrics
 
 ### Comparison
-- `ab-comparison-20260302.md` — CLI vs Premium API comparison
+- `ab-comparison-20260302.md` -- CLI vs premium API comparison
 
 ---
 
-## OpenRouter Dashboard Costs (Verified)
+## OpenRouter Dashboard Costs (Verified Against Logs)
 
 From OpenRouter logs (Mar 2, 2026):
 

@@ -1,14 +1,14 @@
 # Setting Up Persona Council in Your Project
 
-## What This Does
+You're about to add a 7-persona review council to your Claude Code workflow. One slash command sends your plan or spec to 4 AI models running as specialized reviewers. You'll get a severity-graded synthesis brief back in ~60-90 seconds for about $0.04.
 
-Adds a `/council-plan-review` slash command to your Claude Code project. When invoked, it dispatches your plan/spec to 7 specialized reviewer personas (4 AI models via OpenRouter), returning a severity-graded synthesis brief in ~60-90s for $0.04.
+This guide gets you from zero to a working `/council-plan-review` command.
 
 ## Prerequisites
 
-1. **OpenRouter API key** — sign up at [openrouter.ai](https://openrouter.ai), add credits ($5 minimum)
-2. **httpx** — `pip install httpx`
-3. **Clone the repo** (or it's already at `/Users/benison/Projects/persona-council/`)
+1. **OpenRouter API key** -- sign up at [openrouter.ai](https://openrouter.ai) and add credits ($5 minimum)
+2. **httpx** -- `pip install httpx`
+3. **Clone the repo:**
 
 ```bash
 git clone https://github.com/bennjph/persona-council.git
@@ -22,9 +22,9 @@ export OPENROUTER_API_KEY="your-key-here"
 
 ## Add the Slash Command
 
-Create `.claude/commands/council-plan-review.md` in your project root:
+Create `.claude/commands/council-plan-review.md` in your target project root (not in the persona-council repo itself). Copy-paste the entire block below:
 
-```markdown
+````markdown
 # /council-plan-review
 
 ## Purpose
@@ -46,7 +46,7 @@ Dispatch a plan or spec to the Persona Council for multi-persona review. 7 revie
 
 3. Run the council:
    ```
-   python3 /path/to/persona-council/council_api_budget.py \
+   python3 /absolute/path/to/persona-council/council_api_budget.py \
      --plan <plan-file> \
      --scenario <scenario> \
      --repo <repo-path>
@@ -62,9 +62,9 @@ Dispatch a plan or spec to the Persona Council for multi-persona review. 7 revie
    - **Act** — Recommend plan changes or document accepted risk
 
 6. Present processed findings with council metadata (pass rate, wall time, cost).
-```
+````
 
-**Important:** Update `/path/to/persona-council/` to the actual path where you cloned the repo.
+**Important:** Replace `/absolute/path/to/persona-council/` with the actual path where you cloned the repo.
 
 ## Usage
 
@@ -77,7 +77,7 @@ Dispatch a plan or spec to the Persona Council for multi-persona review. 7 revie
 /council-execution-review path/to/original-plan.md
 ```
 
-For execution review, also create `.claude/commands/council-execution-review.md` — same template but with `--scenario execution` and the 5-step protocol focuses on code changes rather than plan changes.
+For execution review, create a second file at `.claude/commands/council-execution-review.md` -- same template but with `--scenario execution`. The 5-step protocol then focuses on code changes rather than plan changes.
 
 ## Scenarios
 
@@ -87,34 +87,42 @@ For execution review, also create `.claude/commands/council-execution-review.md`
 | `prd` | PRDs, specs, requirements documents, feature briefs | `/council-plan-review` |
 | `execution` | Post-implementation code review against the original plan | `/council-execution-review` |
 
-## What You Get
+## What You Get Back
 
 The council produces 3 files in `persona-council/output/`:
 
-1. **Full review** — Raw reviews from all 7 personas with metadata
-2. **Synthesis brief** — Findings grouped by severity with processing instructions
-3. **Metrics JSON** — Latency, tokens, cost per reviewer
+1. **Full review** -- raw reviews from all 7 personas with metadata
+2. **Synthesis brief** -- findings grouped by severity with processing instructions
+3. **Metrics JSON** -- latency, tokens, cost per reviewer
 
-Your agent reads the synthesis brief and processes it — validating findings against your actual plan, discarding false positives, and recommending changes.
+Your agent reads the synthesis brief and processes it -- validating findings against your actual plan, discarding false positives, and recommending changes.
 
-## Models & Cost
+## Models and Cost
 
 | Model | Cost/Review |
 |-------|-------------|
-| DeepSeek V3.2 (×2 personas) | $0.003 |
-| Qwen 3.5-27B (×2 personas) | $0.004 |
-| Gemini Flash 3.0 (×2 personas) | $0.009 |
-| Mistral Large 2512 (×1 persona) | $0.008 |
+| DeepSeek V3.2 (x2 personas) | $0.003 |
+| Qwen 3.5-27B (x2 personas) | $0.004 |
+| Gemini Flash 3.0 (x2 personas) | $0.009 |
+| Mistral Large 2512 (x1 persona) | $0.008 |
 | **Total per run** | **~$0.04** |
 
 ## Verify It Works
 
+Run the council directly from your terminal to confirm everything's wired up:
+
 ```bash
 export OPENROUTER_API_KEY="your-key"
-python3 /path/to/persona-council/council_api_budget.py \
+python3 /absolute/path/to/persona-council/council_api_budget.py \
   --plan /path/to/any-plan.md \
   --scenario dev-plan \
   --repo /path/to/your-project
 ```
 
-Expected: `Done: 7/7 passed | ~90s wall time | $0.04`
+You should see output ending with something like:
+
+```
+Done: 7/7 passed | ~90s wall time | $0.04
+```
+
+If any personas fail, check your API key and that you have OpenRouter credits. The most common issue is an expired or unfunded key.
