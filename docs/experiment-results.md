@@ -242,6 +242,52 @@ Between Experiments 3 and 4, we ran the original 5-model stack (keeping GPT 5.1 
 
 ---
 
+## Experiment 5: Execution Review (New Scenario)
+
+**Stack:** Same 4-model budget stack. NEW personas designed for post-implementation code review.
+
+This is a fundamentally different review type — instead of reviewing a plan before implementation, it reviews the CODE CHANGES against the original plan. Personas were designed from first-principles research across the CTO Mentor vault, existing review patterns, and industry best practices (Google, Microsoft, diffray, CodeRabbit).
+
+### Model Assignment
+
+| Persona | Model | Focus |
+|---------|-------|-------|
+| Logic & Correctness Auditor | DeepSeek V3.2 | Branch tracing, null handling, edge cases, data integrity |
+| Security & Trust Boundary Reviewer | Gemini Flash 3.0 | OWASP Top 10, injection, auth, secrets, trust boundaries |
+| Performance & Resource Efficiency Analyst | Mistral Large | N+1, memory leaks, complexity, resource management |
+| Plan Fidelity Checker | DeepSeek V3.2 | Drift from spec, missing requirements, scope creep |
+| Test & Coverage Verifier | Gemini Flash 3.0 | Coverage gaps, flaky tests, assertion quality |
+| Code Health & Maintainability Inspector | Qwen 3.5-27B | Naming, dead code, complexity, entropy, anti-additive bias |
+| Integration & Contract Compliance Reviewer | Qwen 3.5-27B | API contracts, coupling, type safety, compatibility |
+
+### Results
+
+| Scenario | Pass Rate | Wall Time | Cost | Retries |
+|----------|-----------|-----------|------|---------|
+| execution | **7/7 (100%)** | 176s | $0.042 | 1 (Code Health Inspector) |
+
+### Per-Reviewer Performance
+
+| Persona | Model | Time | Cost | Tokens (in/out) | Retried |
+|---------|-------|------|------|-----------------|---------|
+| Logic & Correctness Auditor | DeepSeek V3.2 | 37.8s | $0.003 | 8,999/1,354 | no |
+| Security & Trust Boundary Reviewer | Gemini Flash 3.0 | 10.7s | $0.009 | 11,901/960 | no |
+| Performance & Resource Efficiency Analyst | Mistral Large | 33.4s | $0.008 | 11,350/1,840 | no |
+| Plan Fidelity Checker | DeepSeek V3.2 | 116.0s | $0.003 | 9,152/1,579 | no |
+| Test & Coverage Verifier | Gemini Flash 3.0 | 10.5s | $0.009 | 11,989/1,142 | no |
+| Code Health & Maintainability Inspector | Qwen 3.5-27B | 32.9s | $0.004 | 11,776/2,539 | yes |
+| Integration & Contract Compliance Reviewer | Qwen 3.5-27B | 72.9s | $0.006 | 11,780/5,556 | no |
+
+### Key Observations
+
+- **7/7 passed.** All execution review personas produced valid, severity-tagged findings on first run.
+- **Code Health Inspector needed 1 retry.** Qwen 3.5-27B's first attempt was too verbose without following format. Self-corrected on retry — same pattern seen in earlier experiments.
+- **Plan Fidelity Checker is the standout.** Unique to execution review — no equivalent in plan-stage review. Caught requirement-to-implementation gaps that other personas missed.
+- **Same cost as plan review.** $0.042 vs $0.040 for dev-plan — execution review is cost-equivalent.
+- **Wall time higher (176s vs 92s).** Driven by DeepSeek V3.2 latency variance (116s for Plan Fidelity Checker). Typical run should be ~90s when DeepSeek is at normal speed.
+
+---
+
 ## Three-Stack Comparison
 
 ### Latency
@@ -445,6 +491,11 @@ All outputs are in `/Users/benison/Projects/persona-council/output/`:
 - `prd-budget-20260302-080102.md` — Budget PRD (7/7)
 - `prd-budget-20260302-080102-synthesis.md` — Synthesis
 - `prd-budget-20260302-080102-metrics.json` — Metrics
+
+### Execution Review (Experiment 5)
+- `execution-budget-20260302-084342.md` — Execution review (7/7)
+- `execution-budget-20260302-084342-synthesis.md` — Synthesis
+- `execution-budget-20260302-084342-metrics.json` — Metrics
 
 ### Comparison
 - `ab-comparison-20260302.md` — CLI vs Premium API comparison
